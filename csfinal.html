@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Editor - Multiple Files</title>
+</head>
+<body>
+    <h2>Edit Two Audio Files Simultaneously</h2>
+
+    <!-- Upload Audio Files -->
+    <h3>Upload First Audio File</h3>
+    <input type="file" id="audioFile1" accept="audio/*"><br><br>
+    
+    <h3>Upload Second Audio File</h3>
+    <input type="file" id="audioFile2" accept="audio/*"><br><br>
+    
+    <!-- Record Audio for File 1 -->
+    <h3>Record First Audio</h3>
+    <button onclick="startRecording(1)">Start Recording (File 1)</button>
+    <button onclick="stopRecording(1)" disabled>Stop Recording (File 1)</button><br><br>
+    
+    <!-- Record Audio for File 2 -->
+    <h3>Record Second Audio</h3>
+    <button onclick="startRecording(2)">Start Recording (File 2)</button>
+    <button onclick="stopRecording(2)" disabled>Stop Recording (File 2)</button><br><br>
+
+    <!-- Controls for First Audio -->
+    <h3>Controls for First Audio File</h3>
+    <label for="pitch1">Pitch (semitones): </label>
+    <input type="number" id="pitch1" value="0"><br><br>
+    <label for="volume1">Volume (dB): </label>
+    <input type="number" id="volume1" value="0"><br><br>
+
+    <!-- Controls for Second Audio -->
+    <h3>Controls for Second Audio File</h3>
+    <label for="pitch2">Pitch (semitones): </label>
+    <input type="number" id="pitch2" value="0"><br><br>
+    <label for="volume2">Volume (dB): </label>
+    <input type="number" id="volume2" value="0"><br><br>
+
+    <button onclick="processAudio()">Process Audio</button><br><br>
+    
+    <h3>Download Edited Audio</h3>
+    <button id="downloadBtn" style="display:none;">Download Edited Audio</button>
+    
+    <!-- Display the recorded or uploaded audio -->
+    <audio id="audioPlayer1" controls style="display:none;"></audio>
+    <audio id="audioPlayer2" controls style="display:none;"></audio>
+
+    <script>
+        let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let originalAudioBuffer1 = null, originalAudioBuffer2 = null;
+        let audioBufferSourceNode1 = null, audioBufferSourceNode2 = null;
+        let audioGainNode1 = audioContext.createGain(), audioGainNode2 = audioContext.createGain();
+        let mediaRecorder1, mediaRecorder2;
+        let audioChunks1 = [], audioChunks2 = [];
+        let recordedAudioBlob1, recordedAudioBlob2;
+        let audioUrl1, audioUrl2;
+
+        // Handle first audio file upload
+        document.getElementById('audioFile1').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                audioContext.decodeAudioData(event.target.result, function(buffer) {
+                    originalAudioBuffer1 = buffer;
+                    console.log('First Audio file loaded');
+                    document.getElementById('audioPlayer1').src = URL.createObjectURL(file);
+                    document.getElementById('audioPlayer1').style.display = 'block';
+                }, function(error) {
+                    console.error('Error decoding audio file 1:', error);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Handle second audio file upload
+        document.getElementById('audioFile2').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                audioContext.decodeAudioData(event.target.result, function(buffer) {
+                    originalAudioBuffer2 = buffer;
+                    console.log('Second Audio file loaded');
+                    document.getElementById('audioPlayer2').src = URL.createObjectURL(file);
+                    document.getElementById('audioPlayer2').style.display = 'block';
+                }, function(error) {
+                    console.error('Error decoding audio file 2:', error);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Start recording from microphone for File 1
+        async function startRecording(fileNum) {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            if (fileNum === 1) {
+                mediaRecorder1 = mediaRecorder;
+                audioChunks1 = [];
+            } else {
+                mediaRecorder2 = mediaRecorder;
+                audioChunks2 = [];
+            }
+
+            mediaRecorder.ondataavailable = function(event) {
+                if (fileNum === 1) {
+                    audioChunks1.push(event.data);
+                } else {
+                    audioChunks2.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = function() {
+                if (fileNum === 1) {
+                    recordedAudioBlob1 = new Blob(audioChunks1, { type: 'audio/wav' });
+                    audioUrl1 = URL.createObjectURL(recordedAudioBlob1);
+                    document.getElementById('audioPlayer1').src = audioUrl1;
+                    document.getElementById('audioPlayer1').style.display = 'block';
+                    originalAudioBuffer1 = null;
+                    decodeAudioBuffer(recordedAudioBlob1, 1);
+                } else {
+                    recordedAudioBlob2 = new Blob(audioChunks2, { type: 'audio/wav' });
+                    audioUrl2 = URL.createObjectURL(recordedAudioBlob2);
+                    document.getElementById('audioPlayer2').src = audioUrl2;
+                    document.getElementById('audioPlayer2').style.display = 'block';
+                    originalAudioBuffer2 = null;
+                    decodeAudioBuffer(recordedAudioBlob2, 2);
+                }
+            };
+
+            mediaRecorder.start();
+            if (fileNum === 1) {
+                document.querySelector('button[onclick="startRecording(1)"]').disabled = true;
+                document.querySelector('button[onclick="stopRecording(1)"]').disabled = false;
+            } else {
+                document.querySelector('button[onclick="startRecording(2)"]').disabled = true;
+                document.querySelector('button[onclick="stopRecording(2)"]').disabled = false;
+            }
+        }
+
+        // Stop recording from microphone
+        function stopRecording(fileNum) {
+            if (fileNum === 1) {
+                mediaRecorder1.stop();
+                document.querySelector('button[onclick="stopRecording(1)"]').disabled = true;
+            } else {
+                mediaRecorder2.stop();
+                document.querySelector('button[onclick="stopRecording(2)"]').disabled = true;
+            }
+        }
+
+        // Decode audio buffer for recorded audio
+        function decodeAudioBuffer(blob, fileNum) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                audioContext.decodeAudioData(event.target.result, function(buffer) {
+                    if (fileNum === 1) {
+                        originalAudioBuffer1 = buffer;
+                    } else {
+                        originalAudioBuffer2 = buffer;
+                    }
+                });
+            };
+            reader.readAsArrayBuffer(blob);
+        }
+
+        // Process the audio (pitch and volume adjustments)
+        function processAudio() {
+            if (!originalAudioBuffer1 && !recordedAudioBlob1 && !originalAudioBuffer2 && !recordedAudioBlob2) {
+                alert("Please upload or record audio files first.");
+                return;
+            }
+
+            // Process for First Audio
+            const pitchShift1 = parseFloat(document.getElementById('pitch1').value);
+            const volumeChange1 = parseFloat(document.getElementById('volume1').value);
+
+            if (originalAudioBuffer1 || recordedAudioBlob1) {
+                if (audioBufferSourceNode1) audioBufferSourceNode1.disconnect();
+                audioBufferSourceNode1 = audioContext.createBufferSource();
+                audioBufferSourceNode1.buffer = originalAudioBuffer1 || audioContext.createBuffer(1, 1, audioContext.sampleRate);
+                audioGainNode1.gain.setValueAtTime(Math.pow(10, volumeChange1 / 20), audioContext.currentTime);
+                const pitchRatio1 = Math.pow(2, pitchShift1 / 12);
+                audioBufferSourceNode1.playbackRate.setValueAtTime(pitchRatio1, audioContext.currentTime);
+                audioBufferSourceNode1.connect(audioGainNode1);
+                audioGainNode1.connect(audioContext.destination);
+                audioBufferSourceNode1.start();
+            }
+
+            // Process for Second Audio
+            const pitchShift2 = parseFloat(document.getElementById('pitch2').value);
+            const volumeChange2 = parseFloat(document.getElementById('volume2').value);
+
+            if (originalAudioBuffer2 || recordedAudioBlob2) {
+                if (audioBufferSourceNode2) audioBufferSourceNode2.disconnect();
+                audioBufferSourceNode2 = audioContext.createBufferSource();
+                audioBufferSourceNode2.buffer = originalAudioBuffer2 || audioContext.createBuffer(1, 1, audioContext.sampleRate);
+                audioGainNode2.gain.setValueAtTime(Math.pow(10, volumeChange2 / 20), audioContext.currentTime);
+                const pitchRatio2 = Math.pow(2, pitchShift2 / 12);
+                audioBufferSourceNode2.playbackRate.setValueAtTime(pitchRatio2, audioContext.currentTime);
+                audioBufferSourceNode2.connect(audioGainNode2);
+                audioGainNode2.connect(audioContext.destination);
+                audioBufferSourceNode2.start();
+            }
+
+            document.getElementById('downloadBtn').style.display = 'block';
+        }
+
+        // Download edited audio as a WAV file
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (!(originalAudioBuffer1 || recordedAudioBlob1 || originalAudioBuffer2 || recordedAudioBlob2)) {
+                alert("No audio to download.");
+                return;
+            }
+
+            // Export to WAV
+            exportAudioToWav();
+        });
+
+        // Function to export audio to WAV format (both files combined or separately)
+        function exportAudioToWav() {
+            // This example simplifies downloading two files separately for simplicity
+            if (originalAudioBuffer1 || recordedAudioBlob1) {
+                // Export first audio
+                audioContext.decodeAudioData(originalAudioBuffer1 || recordedAudioBlob1, function(buffer) {
+                    const wav = audioBufferToWav(buffer);
+                    const blob = new Blob([wav], { type: 'audio/wav' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'edited_audio1.wav';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            }
+            if (originalAudioBuffer2 || recordedAudioBlob2) {
+                // Export second audio
+                audioContext.decodeAudioData(originalAudioBuffer2 || recordedAudioBlob2, function(buffer) {
+                    const wav = audioBufferToWav(buffer);
+                    const blob = new Blob([wav], { type: 'audio/wav' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'edited_audio2.wav';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            }
+        }
+
+        // Convert AudioBuffer to WAV format
+        function audioBufferToWav(buffer) {
+            const numOfChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16; // 16-bit audio
+            const bufferLength = buffer.length * numOfChannels * (bitDepth / 8);
+            const wavBuffer = new ArrayBuffer(44 + bufferLength);
+            const view = new DataView(wavBuffer);
+            writeWavHeader(view, sampleRate, numOfChannels, bitDepth, bufferLength);
+            writeAudioData(view, buffer);
+            return new Uint8Array(wavBuffer);
+        }
+
+        function writeWavHeader(view, sampleRate, numOfChannels, bitDepth, bufferLength) {
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + bufferLength, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numOfChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numOfChannels * (bitDepth / 8), true);
+            view.setUint16(32, numOfChannels * (bitDepth / 8), true);
+            view.setUint16(34, bitDepth, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, bufferLength, true);
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function writeAudioData(view, buffer) {
+            let offset = 44;
+            for (let i = 0; i < buffer.length; i++) {
+                for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                    view.setInt16(offset, buffer.getChannelData(channel)[i] * 32767, true);
+                    offset += 2;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
