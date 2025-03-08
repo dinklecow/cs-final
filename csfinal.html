@@ -168,87 +168,91 @@
 
         // Process the audio (pitch and volume adjustments)
         function processAudio() {
-            if (!originalAudioBuffer1 && !recordedAudioBlob1 && !originalAudioBuffer2 && !recordedAudioBlob2) {
-                alert("Please upload or record audio files first.");
-                return;
-            }
+    if (!originalAudioBuffer1 && !recordedAudioBlob1 && !originalAudioBuffer2 && !recordedAudioBlob2) {
+        alert("Please upload or record audio files first.");
+        return;
+    }
 
-            // Process for First Audio
-            const pitchShift1 = parseFloat(document.getElementById('pitch1').value);
-            const volumeChange1 = parseFloat(document.getElementById('volume1').value);
+    // Process first audio file
+    const pitchShift1 = parseFloat(document.getElementById('pitch1').value);
+    const volumeChange1 = parseFloat(document.getElementById('volume1').value);
 
-            if (originalAudioBuffer1 || recordedAudioBlob1) {
-                if (audioBufferSourceNode1) audioBufferSourceNode1.disconnect();
-                audioBufferSourceNode1 = audioContext.createBufferSource();
-                audioBufferSourceNode1.buffer = originalAudioBuffer1 || audioContext.createBuffer(1, 1, audioContext.sampleRate);
-                audioGainNode1.gain.setValueAtTime(Math.pow(10, volumeChange1 / 20), audioContext.currentTime);
-                const pitchRatio1 = Math.pow(2, pitchShift1 / 12);
-                audioBufferSourceNode1.playbackRate.setValueAtTime(pitchRatio1, audioContext.currentTime);
-                audioBufferSourceNode1.connect(audioGainNode1);
-                audioGainNode1.connect(audioContext.destination);
-                audioBufferSourceNode1.start();
-            }
+    if (originalAudioBuffer1 || recordedAudioBlob1) {
+        if (audioBufferSourceNode1) audioBufferSourceNode1.disconnect();
+        audioBufferSourceNode1 = audioContext.createBufferSource();
+        audioBufferSourceNode1.buffer = originalAudioBuffer1 || audioContext.createBuffer(1, 1, audioContext.sampleRate);
+        audioGainNode1.gain.setValueAtTime(Math.pow(10, volumeChange1 / 20), audioContext.currentTime);
+        const pitchRatio1 = Math.pow(2, pitchShift1 / 12);
+        audioBufferSourceNode1.playbackRate.setValueAtTime(pitchRatio1, audioContext.currentTime);
+        audioBufferSourceNode1.connect(audioGainNode1);
+        audioGainNode1.connect(audioContext.destination);
+        audioBufferSourceNode1.start();
+    }
 
-            // Process for Second Audio
-            const pitchShift2 = parseFloat(document.getElementById('pitch2').value);
-            const volumeChange2 = parseFloat(document.getElementById('volume2').value);
+    // Process second audio file
+    const pitchShift2 = parseFloat(document.getElementById('pitch2').value);
+    const volumeChange2 = parseFloat(document.getElementById('volume2').value);
 
-            if (originalAudioBuffer2 || recordedAudioBlob2) {
-                if (audioBufferSourceNode2) audioBufferSourceNode2.disconnect();
-                audioBufferSourceNode2 = audioContext.createBufferSource();
-                audioBufferSourceNode2.buffer = originalAudioBuffer2 || audioContext.createBuffer(1, 1, audioContext.sampleRate);
-                audioGainNode2.gain.setValueAtTime(Math.pow(10, volumeChange2 / 20), audioContext.currentTime);
-                const pitchRatio2 = Math.pow(2, pitchShift2 / 12);
-                audioBufferSourceNode2.playbackRate.setValueAtTime(pitchRatio2, audioContext.currentTime);
-                audioBufferSourceNode2.connect(audioGainNode2);
-                audioGainNode2.connect(audioContext.destination);
-                audioBufferSourceNode2.start();
-            }
+    if (originalAudioBuffer2 || recordedAudioBlob2) {
+        if (audioBufferSourceNode2) audioBufferSourceNode2.disconnect();
+        audioBufferSourceNode2 = audioContext.createBufferSource();
+        audioBufferSourceNode2.buffer = originalAudioBuffer2 || audioContext.createBuffer(1, 1, audioContext.sampleRate);
+        audioGainNode2.gain.setValueAtTime(Math.pow(10, volumeChange2 / 20), audioContext.currentTime);
+        const pitchRatio2 = Math.pow(2, pitchShift2 / 12);
+        audioBufferSourceNode2.playbackRate.setValueAtTime(pitchRatio2, audioContext.currentTime);
+        audioBufferSourceNode2.connect(audioGainNode2);
+        audioGainNode2.connect(audioContext.destination);
+        audioBufferSourceNode2.start();
+    }
 
-            document.getElementById('downloadBtn').style.display = 'block';
-        }
+    // Show the download button
+    document.getElementById('downloadBtn').style.display = 'block';
+}
 
         // Download edited audio as a WAV file
         document.getElementById('downloadBtn').addEventListener('click', function() {
-            if (!(originalAudioBuffer1 || recordedAudioBlob1 || originalAudioBuffer2 || recordedAudioBlob2)) {
-                alert("No audio to download.");
-                return;
-            }
+    if (!(originalAudioBuffer1 || recordedAudioBlob1 || originalAudioBuffer2 || recordedAudioBlob2)) {
+        alert("No audio to download.");
+        return;
+    }
 
-            // Export to WAV
-            exportAudioToWav();
-        });
+    // Process and export audio to WAV files
+    exportAudioToWav();
+});
+
 
         // Function to export audio to WAV format (both files combined or separately)
         function exportAudioToWav() {
-            // This example simplifies downloading two files separately for simplicity
-            if (originalAudioBuffer1 || recordedAudioBlob1) {
-                // Export first audio
-                audioContext.decodeAudioData(originalAudioBuffer1 || recordedAudioBlob1, function(buffer) {
-                    const wav = audioBufferToWav(buffer);
-                    const blob = new Blob([wav], { type: 'audio/wav' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'edited_audio1.wav';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                });
-            }
-            if (originalAudioBuffer2 || recordedAudioBlob2) {
-                // Export second audio
-                audioContext.decodeAudioData(originalAudioBuffer2 || recordedAudioBlob2, function(buffer) {
-                    const wav = audioBufferToWav(buffer);
-                    const blob = new Blob([wav], { type: 'audio/wav' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'edited_audio2.wav';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                });
-            }
-        }
+    // Export first audio
+    if (originalAudioBuffer1 || recordedAudioBlob1) {
+        const buffer = originalAudioBuffer1 || recordedAudioBlob1;
+        audioContext.decodeAudioData(buffer, function(decodedBuffer) {
+            const wav = audioBufferToWav(decodedBuffer);
+            const blob = new Blob([wav], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'edited_audio1.wav';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    // Export second audio
+    if (originalAudioBuffer2 || recordedAudioBlob2) {
+        const buffer = originalAudioBuffer2 || recordedAudioBlob2;
+        audioContext.decodeAudioData(buffer, function(decodedBuffer) {
+            const wav = audioBufferToWav(decodedBuffer);
+            const blob = new Blob([wav], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'edited_audio2.wav';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+}
 
         // Convert AudioBuffer to WAV format
         function audioBufferToWav(buffer) {
